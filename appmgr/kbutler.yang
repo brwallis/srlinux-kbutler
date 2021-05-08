@@ -1,0 +1,37 @@
+module kbutler {
+
+    yang-version 1.1;
+
+    // namespace
+    namespace "urn:srl_ndk_apps/kbutler";
+
+    prefix "srl_ndk_apps-kbutler";
+
+    revision "2021-05-08" {
+        description "Initial revision";
+    }
+
+    grouping kbutler-top {
+        description "Top level grouping for Kubernetes Butler configuration and state";
+        container kbutler {
+            presence "Top-level container for the Kubernetes Butler configuration and state";
+            description "Top level enclosing container for Kubernetes Butler";
+
+            list service {
+                key "name";
+                description "List of Kubernetes services served by this device";
+                leaf name {
+                  type string;
+                  description
+                    "Name of a Kubernetes service";
+                }
+                leaf-list endpoint {
+                  description
+                    "List of endpoints local to this device, supporting the service";
+                }
+            }
+        }
+    }
+
+    uses kbutler-top;
+}

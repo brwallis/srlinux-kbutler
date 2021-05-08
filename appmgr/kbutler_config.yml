@@ -1,0 +1,11 @@
+kbutler:
+  path: /etc/opt/srlinux/kbutler/bin
+  launch-command: KUBERNETES_SERVICE_HOST=$KUBERNETES_SERVICE_HOST KUBERNETES_SERVICE_PORT=$KUBERNETES_SERVICE_PORT KUBERNETES_NODE_NAME=$KUBERNETES_NODE_NAME KUBERNETES_NODE_IP=$KUBERNETES_NODE_IP ./kbutler
+  search-command: ./kbutler
+  failure-threshold: 100
+  failure-action: "wait=60"
+  yang-modules:
+    names:
+      - "kbutler"
+    source-directories:
+      - "/etc/opt/srlinux/kbutler/yang/"

@@ -1,0 +1,10 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: UnderlayPeer
+metadata:
+  name: some.name
+spec:
+  node: rack1-host1
+  peerIP: 192.168.1.1
+  asNumber: 63400
+

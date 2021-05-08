@@ -1,0 +1,24 @@
+name: "sr_kbutler"
+arch: "amd64"
+platform: "linux"
+version: "v1"
+section: "default"
+priority: "extra"
+replaces:
+- sr_kbutler
+provides:
+- sr_kbutler
+maintainer: "Bruce Wallis <bruce.wallis@nokia.com>"
+description: |
+  SR Linux Kubernetes Butler
+vendor: "Nokia"
+license: "BSD 2"
+bindir: "/opt/srlinux/usr/bin/"
+files:
+  ./build/sr_kube_mgr: "/etc/opt/srlinux/kbutler/bin/sr_kbutler"
+  ./appmgr/kube.yang: "/etc/opt/srlinux/kbutler/yang/kbutler.yang"
+  ./appmgr/kbutler_config.yml: "/etc/opt/srlinux/appmgr/kbutler_config.yml"
+config_files:
+overrides:
+  rpm:
+    scripts:
