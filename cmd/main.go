@@ -1,9 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
@@ -11,10 +8,8 @@ import (
 
 	// "srlinux.io/kbutler/pkg/storage"
 	"github.com/brwallis/srlinux-kbutler/internal/agent"
-	"github.com/brwallis/srlinux-kbutler/internal/cpumgr"
 	"github.com/brwallis/srlinux-kbutler/internal/k8s"
-	"github.com/brwallis/srlinux-kbutler/internal/netmgr"
-	"github.com/vishvananda/netns"
+	"github.com/brwallis/srlinux-kbutler/internal/servicemgr"
 )
 
 const (
@@ -32,7 +27,7 @@ var (
 func SetName(nodeName string) {
 	log.Infof("Setting node name...")
 	// KButler.Yang.NodeName = &nodeName
-	KButler.Yang.SetNodeName(nodeName)
+	// KButler.Yang.SetNodeName(nodeName)
 	//KButler.Yang.NodeName.Value = nodeName
 	// JsData, err := json.Marshal(KButler.Yang)
 	// if err != nil {
@@ -48,25 +43,17 @@ func SetName(nodeName string) {
 // PodCounterMgr counts pods!
 func PodCounterMgr(clientSet *kubernetes.Clientset, nodeName string) {
 	for {
-		totalPodsCluster, totalPodsLocal := k8s.PodCounter(clientSet, nodeName)
-		KButler.Yang.SetPods(totalPodsCluster, totalPodsLocal)
+		// totalPodsCluster, totalPodsLocal := k8s.PodCounter(clientSet, nodeName)
+		// KButler.Yang.SetPods(totalPodsCluster, totalPodsLocal)
 		KButler.UpdateTelemetry()
 		time.Sleep(5 * time.Second)
 	}
 }
 
 func main() {
-	var err error
-	nodeName := os.Getenv("KUBERNETES_NODE_NAME")
-	nodeIP := os.Getenv("KUBERNETES_NODE_IP")
-
-	srlNS, err := netns.Get()
-	log.Infof("Running in namespace: %#v", srlNS)
-	toWrite := []byte(fmt.Sprint(srlNS))
-	err = ioutil.WriteFile("/etc/opt/srlinux/namespace", toWrite, 0644)
-	if err != nil {
-		log.Fatalf("Unable to write namespace: %v to file /etc/opt/srlinux/namespace")
-	}
+	// var err error
+	// nodeName := os.Getenv("KUBERNETES_NODE_NAME")
+	// nodeIP := os.Getenv("KUBERNETES_NODE_IP")
 
 	log.Infof("Initializing NDK...")
 	KButler = agent.Agent{}
@@ -80,23 +67,13 @@ func main() {
 	log.Infof("Initializing K8 client...")
 	KubeClientSet := k8s.K8Init()
 
-	log.Infof("Starting PodCounterMgr...")
-	KButler.Wg.Add(1)
-	go PodCounterMgr(KubeClientSet, nodeName)
+	// log.Infof("Starting PodCounterMgr...")
+	// KButler.Wg.Add(1)
+	// go PodCounterMgr(KubeClientSet, nodeName)
 
-	log.Infof("Starting CPUMgr...")
+	log.Infof("Starting ServiceMgr...")
 	KButler.Wg.Add(1)
-	go cpumgr.CPUMgr(KubeClientSet, &KButler)
-
-	time.Sleep(2 * time.Second)
-	log.Infof("Starting NetMgr...")
-	KButler.Wg.Add(1)
-	go netmgr.NetMgr(KubeClientSet, nodeIP, &KButler)
-
-	time.Sleep(2 * time.Second)
-	log.Infof("Starting NameMgr...")
-	KButler.Wg.Add(1)
-	go SetName(nodeName)
+	go servicemgr.ServiceMgr(KubeClientSet, &KButler)
 
 	KButler.Wg.Wait()
 

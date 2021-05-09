@@ -31,7 +31,9 @@ type ServiceController struct {
 
 // processService processes updates to Services
 func processService(service *v1.Service) {
-	log.Infof("Processing service... but not doing anything right now :): %s", service.Data)
+	// log.Infof("Processing service... but not doing anything right now :): %s", service.Data)
+	log.Infof("Processing service... but not doing anything right now :). Service name: %s", service.Name)
+	log.Infof("Processing service... but not doing anything right now :). Service name: %s", service.Name)
 }
 
 // Run starts shared informers and waits for the shared informer cache to synchronize
@@ -48,6 +50,10 @@ func (c *ServiceController) Run(stopCh chan struct{}) error {
 func (c *ServiceController) serviceAdd(obj interface{}) {
 	service := obj.(*v1.Service)
 	log.Infof("Service CREATED: %s/%s", service.Namespace, service.Name)
+	log.Infof("Service %s/%s has ClusterIP: %v, ClusterIP/s: %v, ExternalIP/s: %v", service.Namespace, service.Name, service.Spec.ClusterIP, service.Spec.ClusterIPs, service.Spec.ExternalIPs)
+	KButler.Yang.AddService(service.Namespace, service.Name, service.Spec.ClusterIP, "batman", "batman", []string{"test", "test"})
+	KButler.UpdateTelemetry()
+	// config.AddService(service.Namespace, service.Name, externalAddress, node, nodeAddress, nextHops)
 	if service.Namespace == "kube-system" {
 		if service.Name == "srlinux-config" {
 			log.Infof("Service has the correct name: %s", service.Name)
@@ -78,7 +84,8 @@ func (c *ServiceController) serviceDelete(obj interface{}) {
 
 // NewServiceController creates a ServiceController
 func NewServiceController(informerFactory informers.SharedInformerFactory) *ServiceController {
-	serviceInformer := informerFactory.Core().V1().ConfigMaps()
+	// serviceInformer := informerFactory.Core().V1().ConfigMaps()
+	serviceInformer := informerFactory.Core().V1().Services()
 
 	c := &ServiceController{
 		informerFactory: informerFactory,

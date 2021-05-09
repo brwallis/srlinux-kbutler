@@ -1,0 +1,115 @@
+---
+# Service account/roles
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: srlinux-kbutler
+rules:
+  # Nodes are watched to monitor for deletions
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - pods
+      - namespaces
+      - endpoints
+      - services
+      - configmaps
+      - serviceaccounts
+    verbs:
+      - watch
+      - list
+      - get
+  # Nodes/status is needed to clear NodeNetworkUnavailable, and annotations are used to store information
+  - apiGroups: [""]
+    resources:
+      - nodes/status
+    verbs:
+      - patch
+      - update
+  # pods/status is needed to for the CLI plugin to update pod state
+  - apiGroups: [""]
+    resources:
+      - pods/status
+    verbs:
+      - patch
+  # Watch for changes to K8 NetworkPolicies
+  - apiGroups: ["networking.k8s.io"]
+    resources:
+      - networkpolicies
+    verbs:
+      - watch
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: srlinux-kbutler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: srlinux-kbutler
+subjects:
+  - kind: ServiceAccount
+    name: srlinux-kbutler
+    namespace: kube-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: srlinux-kbutler
+  namespace: kube-system
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: srlinux-kbutler-amd64
+  namespace: kube-system
+  labels:
+    tier: node
+    app: kbutler
+spec:
+  selector:
+    matchLabels:
+      name: srlinux-kbutler
+  template:
+    metadata:
+      labels:
+        name: srlinux-kbutler
+        tier: node
+        app: kbutler
+    spec:
+      nodeSelector:
+        beta.kubernetes.io/arch: amd64
+        node.kubernetes.io/instance-type: baremetal
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      serviceAccountName: srlinux-kbutler
+      containers:
+      - name: srlinux-kbutler
+        image: registry.gitlabsr.nuq.ion.nokia.net/bwallis/srlinux-cni/kbutler:latest
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: srletcdir
+          mountPath: /host/etc/opt/srlinux
+          readOnly: false
+        env:
+          - name: KUBERNETES_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: KUBERNETES_NODE_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+      terminationGracePeriodSeconds: 5
+      volumes:
+        - name: srletcdir
+          hostPath:
+            path: /etc/opt/srlinux
+            type: DirectoryOrCreate
+      imagePullSecrets:
+      - name: srlinux-cni

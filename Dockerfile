@@ -28,11 +28,11 @@ ARG BINARY_NAME="kbutler"
 RUN mkdir -p /${BINARY_NAME}/bin
 RUN mkdir -p /${BINARY_NAME}/yang
 COPY --from=builder ${WORK_DIR}/build/$BINARY_NAME /${BINARY_NAME}/bin/
-COPY --from=builder ${WORK_DIR}/appmgr/kube.yang /${BINARY_NAME}/yang
-COPY --from=builder ${WORK_DIR}/appmgr/kubemgr_config.yml /${BINARY_NAME}/
+COPY --from=builder ${WORK_DIR}/appmgr/kbutler.yang /${BINARY_NAME}/yang
+COPY --from=builder ${WORK_DIR}/appmgr/kbutler_config.yml /${BINARY_NAME}/
 WORKDIR /
 
-LABEL io.k8s.display-name="Nokia SR Linux Kubernetes Butler"
+LABEL io.k8s.display-name="Nokia SR Linux KButler"
 
 COPY ./images/entrypoint.sh /entrypoint.sh
 

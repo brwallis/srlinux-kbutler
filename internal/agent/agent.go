@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -11,7 +10,7 @@ import (
 	log "k8s.io/klog"
 
 	"github.com/brwallis/srlinux-go/pkg/ndk/nokia.com/srlinux/sdk/protos"
-	"github.com/brwallis/srlinux-kubemgr/internal/config"
+	"github.com/brwallis/srlinux-kbutler/internal/config"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -243,16 +242,16 @@ func HandleKubeConfigEvent(op protos.SdkMgrOperation, key *protos.ConfigKey, dat
 	log.Infof("\nkey %v", *key)
 	log.Infof("\nkey %v doing something now", *key)
 
-	a.Yang.SetName(cur.Name.Value)
-	// a.Yang.Name.Value = cur.Name.Value
-	if len(a.Yang.Name.Value) < 1 {
-		a.Yang.SetResponse("Hello, do tell me your name")
-		// a.Yang.Response.Value = fmt.Sprintf("Hello, do tell me your name")
-	} else {
-		a.Yang.SetResponse(fmt.Sprintf("Hello, %s", a.Yang.GetName()))
-		// a.Yang.Response.Value = fmt.Sprintf("Hello, %s", a.Yang.GetName())
-	}
-	a.UpdateTelemetry()
+	// a.Yang.SetName(cur.Name.Value)
+	// // a.Yang.Name.Value = cur.Name.Value
+	// if len(a.Yang.Name.Value) < 1 {
+	// 	a.Yang.SetResponse("Hello, do tell me your name")
+	// 	// a.Yang.Response.Value = fmt.Sprintf("Hello, do tell me your name")
+	// } else {
+	// 	a.Yang.SetResponse(fmt.Sprintf("Hello, %s", a.Yang.GetName()))
+	// 	// a.Yang.Response.Value = fmt.Sprintf("Hello, %s", a.Yang.GetName())
+	// }
+	// a.UpdateTelemetry()
 	// agent.Yang.Name = cur.Kubernetes.Name
 	// if len(*agent.Yang.Name) < 1 {
 	// 	*agent.Yang.Response = fmt.Sprintf("Hello, do tell me your name")

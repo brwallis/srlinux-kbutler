@@ -80,7 +80,6 @@ sed -i 's/$KUBERNETES_NODE_IP/'"$KUBERNETES_NODE_IP"'/' "$KBUTLER_CONFIG"
 cp -f "$KBUTLER_BIN_FILE" "$SRL_ETC_DIR/kbutler/bin/"
 cp -f "$KBUTLER_YANG" "$SRL_ETC_DIR/kbutler/yang/"
 cp -f "$KBUTLER_CONFIG" "$SRL_ETC_DIR/appmgr/"
-cp -f "/etc/config/config" "$SRL_ETC_DIR/config.json"
 
 echo "Entering sleep... (success)"
 
