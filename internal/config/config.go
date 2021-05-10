@@ -1,74 +1,55 @@
 package config
 
+// import "fmt"
+
+type OperState struct {
+	Value string `json:"value"`
+}
+
 type Address struct {
+	Value string `json:"value"`
+}
+
+type Name struct {
 	Value string `json:"value"`
 }
 
 type Node struct {
 	Address Address `json:"address"`
+	// Hostname Name    `json:"hostname"`
+	// Hostname string `json:"hostname"`
 	// NextHop struct {
 	// 	Value string `json:"value"`
 	// } `json:"next_hop"`
 }
 
 type ExternalAddress struct {
-	Node map[string]Node `json:"node"`
+	// Node map[string]Node `json:"node"`
+	OperState   OperState `json:"oper_state"`
+	HostAddress Address   `json:"host_address"`
+	// Address Address         `json:"address"`
+	// Address string `json:"address"`
 	// NextHops struct {
 	// 	value []string `json:"next_hops"`
 	// }
 }
 
 type Service struct {
-	ExternalAddress map[string]ExternalAddress `json:"external_address"`
+	// ExternalAddress map[string]ExternalAddress `json:"external_address"`
+	OperState OperState `json:"oper_state"`
+	// Name            Name                       `json:"name"`
+	// Name string `json:"name"`
 }
 
 type Namespace struct {
 	Service map[string]Service `json:"service"`
+	// Name    Name               `json:"name"`
+	// Name string `json:"name"`
 }
 
 // AgentYang holds the YANG schema for the agent
 type AgentYang struct {
-	Namespace map[string]Namespace `json:"namespace"`
-}
-
-func (ay *AgentYang) AddService(
-	namespace string,
-	name string,
-	externalAddress string,
-	node string,
-	nodeAddress string,
-	nextHops []string) {
-	// Build structs for the service
-	newAddress := Address{
-		Value: nodeAddress,
-	}
-	newNode := Node{
-		Address: newAddress,
-		// NextHop:
-	}
-	nodes := make(map[string]Node)
-	nodes[node] = newNode
-
-	newExternalAddress := ExternalAddress{
-		Node: nodes,
-	}
-	externalAddresses := make(map[string]ExternalAddress)
-	externalAddresses[externalAddress] = newExternalAddress
-
-	newService := Service{
-		ExternalAddress: externalAddresses,
-	}
-	services := make(map[string]Service)
-	services[name] = newService
-
-	newNamespace := Namespace{
-		Service: services,
-	}
-	namespaces := make(map[string]Namespace)
-	namespaces[namespace] = newNamespace
-
-	// Update telemetry
-	ay.Namespace = namespaces
+	Controller Address `json:"controller"`
 }
 
 // func (ay *AgentYang) AddNamespace(name string, service struct{}) {

@@ -16,18 +16,40 @@ module kbutler {
         container kbutler {
             presence "Top-level container for the Kubernetes Butler configuration and state";
             description "Top level enclosing container for Kubernetes Butler";
-
+            leaf controller {
+                type string;
+                description "Kubernetes API server this instance is connected to";
+            }
             list service {
-                key "name";
-                description "List of Kubernetes services served by this device";
-                leaf name {
-                  type string;
-                  description
-                    "Name of a Kubernetes service";
+                key "service-name namespace";
+                description "List of services being served by this device";
+                leaf service-name {
+                    type string;
+                    description "Name of the service";
                 }
-                leaf-list endpoint {
-                  description
-                    "List of endpoints local to this device, supporting the service";
+                leaf namespace {
+                    type string;
+                    description "Name of the namespace this service is present in";
+                }
+                leaf oper-state {
+                    type string;
+                    description "Operational state of the service on this device";
+                }
+                list external-address {
+                    key "address hostname";
+                    description "List of external addresses this service can be reached via";
+                    leaf address {
+                        type string;
+                        description "IP address this service can be reached via";
+                    }
+                    leaf hostname {
+                        type string;
+                        description "Hostname of a host providing the service";
+                    }
+                    leaf host-address {
+                        type string;
+                        description "IP address this host is advertising for service reachability";
+                    }
                 }
             }
         }

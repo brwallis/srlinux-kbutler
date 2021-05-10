@@ -1,10 +1,12 @@
 package servicemgr
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/brwallis/srlinux-kbutler/internal/agent"
+	"github.com/brwallis/srlinux-kbutler/internal/config"
 
 	log "k8s.io/klog"
 
@@ -29,11 +31,87 @@ type ServiceController struct {
 	serviceInformer coreinformers.ServiceInformer
 }
 
+// func (ay *AgentYang) AddService(
+// 	namespace string,
+// 	serviceName string,
+// 	externalAddress string,
+// 	node string,
+// 	nodeAddress string,
+// 	nextHops []string) {
+// 	// Build structs for the service
+// 	newAddress := Address{
+// 		Value: nodeAddress,
+// 	}
+// 	newNode := Node{
+// 		Address:  newAddress,
+// 		// Hostname: node,
+// 		// Hostname: Name{
+// 		// 	Value: node,
+// 		// },
+// 		// NextHop:
+// 	}
+// 	nodes := make(map[string]Node)
+// 	nodes[node] = newNode
+
+// 	newExternalAddress := ExternalAddress{
+// 		Node:    nodes,
+// 		// Address: externalAddress,
+// 		// Address: Address{
+// 		// 	Value: externalAddress,
+// 		// },
+// 	}
+// 	externalAddresses := make(map[string]ExternalAddress)
+// 	externalAddresses[externalAddress] = newExternalAddress
+
+// 	newService := Service{
+// 		ExternalAddress: externalAddresses,
+// 		// Name:            name,
+// 		// Name: Name{
+// 		// 	Value: name,
+// 		// },
+// 	}
+// 	services := make(map[string]Service)
+// 	services[name] = newService
+
+// 	newNamespace := Namespace{
+// 		Service: services,
+// 		// Name:    namespace,
+// 		// Name: Name{
+// 		// 	Value: namespace,
+// 		// },
+// 	}
+// 	namespaces := make(map[string]Namespace)
+// 	namespaces[namespace] = newNamespace
+// }
+
 // processService processes updates to Services
 func processService(service *v1.Service) {
-	// log.Infof("Processing service... but not doing anything right now :): %s", service.Data)
-	log.Infof("Processing service... but not doing anything right now :). Service name: %s", service.Name)
-	log.Infof("Processing service... but not doing anything right now :). Service name: %s", service.Name)
+	var serviceYang config.Service
+	// var externalAddressYang config.ExternalAddress
+	log.Infof("Processing service... Service name: %s", service.Name)
+
+	jsPath := fmt.Sprintf("%s.service{.service_name==\"%s\"&&.namespace==\"%s\"}", yangRoot, service.Name, service.Namespace)
+	serviceYang.OperState.Value = "up"
+	serviceData, err := json.Marshal(serviceYang)
+	if err != nil {
+		log.Infof("Failed to marshal data for service: %v", err)
+	}
+	serviceString := string(serviceData)
+	KButler.UpdateServiceTelemetry(&jsPath, &serviceString)
+
+	// KButler.Yang.AddService(service.Namespace, service.Name, service.Spec.ClusterIP, "batman", "batman", []string{"test", "test"})
+
+	// log.Infof("Processing service external address... Service name: %s, address: %s", service.Name, service.Spec.ClusterIP)
+	// externalAddressPath := fmt.Sprintf("%s.external_address{.address==\"%s\"&&.hostname==\"%s\"}", jsPath, service.Spec.ClusterIP, "batman")
+	// externalAddressYang.HostAddress.Value = "192.168.0.14"
+	// service.
+	// service
+	// externalAddressData, err := json.Marshal(externalAddressYang)
+	// if err != nil {
+	// 	log.Infof("Failed to marshal data for service: %v", err)
+	// }
+	// externalAddressString := string(externalAddressData)
+	// KButler.UpdateServiceTelemetry(&externalAddressPath, &externalAddressString)
 }
 
 // Run starts shared informers and waits for the shared informer cache to synchronize
@@ -51,8 +129,7 @@ func (c *ServiceController) serviceAdd(obj interface{}) {
 	service := obj.(*v1.Service)
 	log.Infof("Service CREATED: %s/%s", service.Namespace, service.Name)
 	log.Infof("Service %s/%s has ClusterIP: %v, ClusterIP/s: %v, ExternalIP/s: %v", service.Namespace, service.Name, service.Spec.ClusterIP, service.Spec.ClusterIPs, service.Spec.ExternalIPs)
-	KButler.Yang.AddService(service.Namespace, service.Name, service.Spec.ClusterIP, "batman", "batman", []string{"test", "test"})
-	KButler.UpdateTelemetry()
+	processService(service)
 	// config.AddService(service.Namespace, service.Name, externalAddress, node, nodeAddress, nextHops)
 	if service.Namespace == "kube-system" {
 		if service.Name == "srlinux-config" {

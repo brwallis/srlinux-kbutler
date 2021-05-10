@@ -36,8 +36,10 @@ type Agent struct {
 
 	CfgTranxMap map[string][]CfgTranxEntry
 
-	Yang     config.AgentYang
-	YangRoot string
+	Yang                config.AgentYang
+	YangService         map[string]*config.Service
+	YangExternalAddress map[string]*config.ExternalAddress
+	YangRoot            string
 }
 
 func (a *Agent) GetName() string {
@@ -54,6 +56,29 @@ func (a *Agent) GetStreamID() uint64 {
 
 func (a *Agent) SetStreamID(streamID uint64) {
 	a.StreamID = streamID
+}
+
+func (a *Agent) UpdateServiceTelemetry(jsPath *string, jsData *string) {
+	ctx := context.Background()
+	log.Infof("JsPath: %s", jsPath)
+	log.Infof("JsString: %s", jsData)
+
+	// Set up agent name
+	ctx = metadata.AppendToOutgoingContext(ctx, "agent_name", a.Name)
+	telClient := protos.NewSdkMgrTelemetryServiceClient(a.GrpcConn)
+
+	key := &protos.TelemetryKey{JsPath: *jsPath}
+	data := &protos.TelemetryData{JsonContent: *jsData}
+	entry := &protos.TelemetryInfo{Key: key, Data: data}
+	telReq := &protos.TelemetryUpdateRequest{}
+	telReq.State = make([]*protos.TelemetryInfo, 0)
+	telReq.State = append(telReq.State, entry)
+
+	r1, err := telClient.TelemetryAddOrUpdate(ctx, telReq)
+	if err != nil {
+		log.Fatalf("Could not update telemetry for key : %s", jsPath)
+	}
+	log.Infof("Telemetry add/update status: %s error_string: %s", r1.GetStatus(), r1.GetErrorStr())
 }
 
 func (a *Agent) UpdateTelemetry() {

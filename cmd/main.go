@@ -6,8 +6,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	log "k8s.io/klog"
 
-	// "srlinux.io/kbutler/pkg/storage"
 	"github.com/brwallis/srlinux-kbutler/internal/agent"
+	"github.com/brwallis/srlinux-kbutler/internal/endpointmgr"
 	"github.com/brwallis/srlinux-kbutler/internal/k8s"
 	"github.com/brwallis/srlinux-kbutler/internal/servicemgr"
 )
@@ -74,6 +74,10 @@ func main() {
 	log.Infof("Starting ServiceMgr...")
 	KButler.Wg.Add(1)
 	go servicemgr.ServiceMgr(KubeClientSet, &KButler)
+
+	log.Infof("Starting EndpointMgr...")
+	KButler.Wg.Add(1)
+	go endpointmgr.EndpointMgr(KubeClientSet, &KButler)
 
 	KButler.Wg.Wait()
 
