@@ -59,8 +59,8 @@ github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/bketelsen/crypt v0.0.3-0.20200106085610-5cbc8cc4026c/go.mod h1:MKsuJmJgSg28kpZDP6UIiPt0e0Oz0kqKNGyRaWEPv84=
-github.com/brwallis/srlinux-go v0.0.0-20210405172141-38d02f075773 h1:jypDBcNwMf6ub79yojagxyifYkMMzUeu7TECVBCY240=
-github.com/brwallis/srlinux-go v0.0.0-20210405172141-38d02f075773/go.mod h1:YhdfOSOSjAbco+Oh+08flNS1zfYdgkaC1V52EpFGmHE=
+github.com/brwallis/srlinux-go v0.0.0-20210511011823-da7e6698cf53 h1:ypOxWJ97eFPFEFkfwF0DQLZGVpOFQLeCoXbRi7pjIxQ=
+github.com/brwallis/srlinux-go v0.0.0-20210511011823-da7e6698cf53/go.mod h1:YhdfOSOSjAbco+Oh+08flNS1zfYdgkaC1V52EpFGmHE=
 github.com/cenkalti/backoff/v4 v4.0.0/go.mod h1:eEew/i+1Q6OrCDZh3WiXYv3+nJwBASZ8Bog/87DQnVg=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=
@@ -174,6 +174,7 @@ github.com/golang/snappy v0.0.1/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEW
 github.com/golang/snappy v0.0.2/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
 github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
 github.com/google/btree v1.0.0/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
+github.com/google/gnxi v0.0.0-20210301094713-a533bddd461b h1:Xx+tBov991MwBkH321bVTZg1OLxz68TvmM0XULkbYFo=
 github.com/google/gnxi v0.0.0-20210301094713-a533bddd461b/go.mod h1:dPTuHPVOqxZ2yGKPjymiMt1vrZa8KHXWKX+Lx1z5d88=
 github.com/google/go-cmp v0.2.0/go.mod h1:oXzfMopK8JAjlY9xF4vHSVASa0yLyX7SntLO5aqRK0M=
 github.com/google/go-cmp v0.3.0/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=

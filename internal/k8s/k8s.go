@@ -25,7 +25,7 @@ func K8Init() *kubernetes.Clientset {
 }
 
 // Client initializes the interface towards the K8 API server
-func Client(kubeConfig string) *kubernetes.Clientset {
+func Client(kubeConfig string) (*kubernetes.Clientset, *rest.Config) {
 	var config *rest.Config
 	var clientSet *kubernetes.Clientset
 	var err error
@@ -39,7 +39,7 @@ func Client(kubeConfig string) *kubernetes.Clientset {
 			panic(err.Error())
 		}
 	} else {
-		config, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
+		config, err = clientcmd.BuildConfigFromFlags("", kubeConfig)
 		if err != nil {
 			panic(err.Error())
 		}
@@ -48,7 +48,7 @@ func Client(kubeConfig string) *kubernetes.Clientset {
 			panic(err.Error())
 		}
 	}
-	return clientSet
+	return clientSet, config
 }
 
 // countPods takes a K8 clientSet and a node name and returns a count of pods matching

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"os"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	log "k8s.io/klog"
 
 	"github.com/brwallis/srlinux-kbutler/internal/agent"
@@ -13,7 +15,8 @@ import (
 )
 
 const (
-	ndkAddress = "localhost:50053"
+	// ndkAddress = "localhost:50053"
+	ndkAddress = "unix:///opt/srlinux/var/run/sr_sdk_service_manager:50053"
 	agentName  = "kbutler"
 	yangRoot   = ".kbutler"
 )
@@ -36,7 +39,7 @@ func SetName(nodeName string) {
 	// JsString := string(JsData)
 	// log.Infof("JsPath: %s", KButler.YangRoot)
 	// log.Infof("JsString: %s", JsString)
-	KButler.UpdateTelemetry()
+	KButler.UpdateBaseTelemetry()
 	// ndk.UpdateTelemetry(KButler, &JsPath, &JsString)
 }
 
@@ -45,13 +48,25 @@ func PodCounterMgr(clientSet *kubernetes.Clientset, nodeName string) {
 	for {
 		// totalPodsCluster, totalPodsLocal := k8s.PodCounter(clientSet, nodeName)
 		// KButler.Yang.SetPods(totalPodsCluster, totalPodsLocal)
-		KButler.UpdateTelemetry()
+		KButler.UpdateBaseTelemetry()
 		time.Sleep(5 * time.Second)
 	}
 }
 
+// SetController updates the NDK with a Kubernetes controller IP address
+func SetController(kubeConfig *rest.Config) {
+	if kubeConfig.Host != "" {
+		KButler.Yang.Controller.Value = kubeConfig.Host
+	} else {
+		log.Infof("Unable to parse Kubernetes API server from kubeconfig")
+		KButler.Yang.Controller.Value = "unknown"
+	}
+	KButler.UpdateBaseTelemetry()
+}
+
 func main() {
-	// var err error
+	var KubeClientSet *kubernetes.Clientset
+	var KubeConfig *rest.Config
 	// nodeName := os.Getenv("KUBERNETES_NODE_NAME")
 	// nodeIP := os.Getenv("KUBERNETES_NODE_IP")
 
@@ -65,7 +80,14 @@ func main() {
 
 	time.Sleep(2 * time.Second)
 	log.Infof("Initializing K8 client...")
-	KubeClientSet := k8s.K8Init()
+	// KubeClientSet := k8s.K8Init()
+	if os.Getenv("KUBERNETES_CONFIG") != "" {
+		KubeClientSet, KubeConfig = k8s.Client(os.Getenv("KUBERNETES_CONFIG"))
+	} else {
+		log.Errorf("Unable to initialize K8 client set, env var KUBERNETES_CONFIG not set")
+	}
+	log.Infof("KubeConfig: %#v", KubeConfig)
+	SetController(KubeConfig)
 
 	// log.Infof("Starting PodCounterMgr...")
 	// KButler.Wg.Add(1)

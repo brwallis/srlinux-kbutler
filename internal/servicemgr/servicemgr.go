@@ -1,7 +1,7 @@
 package servicemgr
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"time"
 
@@ -11,6 +11,7 @@ import (
 	log "k8s.io/klog"
 
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	coreinformers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -22,7 +23,8 @@ const (
 )
 
 var (
-	KButler *agent.Agent
+	KButler   *agent.Agent
+	ClientSet *kubernetes.Clientset
 )
 
 // ServiceController struct
@@ -31,87 +33,50 @@ type ServiceController struct {
 	serviceInformer coreinformers.ServiceInformer
 }
 
-// func (ay *AgentYang) AddService(
-// 	namespace string,
-// 	serviceName string,
-// 	externalAddress string,
-// 	node string,
-// 	nodeAddress string,
-// 	nextHops []string) {
-// 	// Build structs for the service
-// 	newAddress := Address{
-// 		Value: nodeAddress,
-// 	}
-// 	newNode := Node{
-// 		Address:  newAddress,
-// 		// Hostname: node,
-// 		// Hostname: Name{
-// 		// 	Value: node,
-// 		// },
-// 		// NextHop:
-// 	}
-// 	nodes := make(map[string]Node)
-// 	nodes[node] = newNode
+// getExternalIPForService takes a service name and namespace, and returns the external IP address
+func getExternalIPForService(serviceName string, namespace string) string {
+	var externalAddress string
+	service, err := ClientSet.CoreV1().Services(namespace).Get(context.Background(), serviceName, metav1.GetOptions{})
+	if err != nil {
+		log.Errorf("Error retrieving service with name: %s, %e", serviceName, err)
+	}
 
-// 	newExternalAddress := ExternalAddress{
-// 		Node:    nodes,
-// 		// Address: externalAddress,
-// 		// Address: Address{
-// 		// 	Value: externalAddress,
-// 		// },
-// 	}
-// 	externalAddresses := make(map[string]ExternalAddress)
-// 	externalAddresses[externalAddress] = newExternalAddress
-
-// 	newService := Service{
-// 		ExternalAddress: externalAddresses,
-// 		// Name:            name,
-// 		// Name: Name{
-// 		// 	Value: name,
-// 		// },
-// 	}
-// 	services := make(map[string]Service)
-// 	services[name] = newService
-
-// 	newNamespace := Namespace{
-// 		Service: services,
-// 		// Name:    namespace,
-// 		// Name: Name{
-// 		// 	Value: namespace,
-// 		// },
-// 	}
-// 	namespaces := make(map[string]Namespace)
-// 	namespaces[namespace] = newNamespace
-// }
+	for _, ingress := range service.Status.LoadBalancer.Ingress {
+		externalAddress = ingress.IP
+		// if address.Type == "InternalIP" {
+		// 	externalAddress = address
+		// } else {
+		// 	log.Infof("Skipping adding address: %s, of type: %s", nodeAddress.Address, nodeAddress.Type)
+		// }
+	}
+	return externalAddress
+}
 
 // processService processes updates to Services
 func processService(service *v1.Service) {
-	var serviceYang config.Service
+	var serviceKey agent.ServiceKey
+	var serviceData config.Service
 	// var externalAddressYang config.ExternalAddress
-	log.Infof("Processing service... Service name: %s", service.Name)
+	if service.Status.LoadBalancer.Ingress != nil {
+		log.Infof("Processing service... Service name: %s", service.Name)
 
-	jsPath := fmt.Sprintf("%s.service{.service_name==\"%s\"&&.namespace==\"%s\"}", yangRoot, service.Name, service.Namespace)
-	serviceYang.OperState.Value = "up"
-	serviceData, err := json.Marshal(serviceYang)
-	if err != nil {
-		log.Infof("Failed to marshal data for service: %v", err)
+		// jsPath := fmt.Sprintf("%s.service{.service_name==\"%s\"&&.namespace==\"%s\"}", yangRoot, service.Name, service.Namespace)
+		serviceKey.Name = service.Name
+		serviceKey.Namespace = service.Namespace
+		serviceData.OperState.Value = "updating"
+		serviceData.OperReason.Value = "processing-service-update"
+		KButler.YangService[serviceKey] = &serviceData
+		KButler.UpdateServiceTelemetry(serviceKey)
+		// serviceData, err := json.Marshal(serviceYang)
+		// if err != nil {
+		// 	log.Infof("Failed to marshal data for service: %v", err)
+		// }
+		// serviceString := string(serviceData)
+		// KButler.UpdateServiceTelemetry(&jsPath, &serviceString)
+
+	} else {
+		log.Infof("Skipping processing service: %s, no external IP: %v", service.Name, service.Status.LoadBalancer.Ingress)
 	}
-	serviceString := string(serviceData)
-	KButler.UpdateServiceTelemetry(&jsPath, &serviceString)
-
-	// KButler.Yang.AddService(service.Namespace, service.Name, service.Spec.ClusterIP, "batman", "batman", []string{"test", "test"})
-
-	// log.Infof("Processing service external address... Service name: %s, address: %s", service.Name, service.Spec.ClusterIP)
-	// externalAddressPath := fmt.Sprintf("%s.external_address{.address==\"%s\"&&.hostname==\"%s\"}", jsPath, service.Spec.ClusterIP, "batman")
-	// externalAddressYang.HostAddress.Value = "192.168.0.14"
-	// service.
-	// service
-	// externalAddressData, err := json.Marshal(externalAddressYang)
-	// if err != nil {
-	// 	log.Infof("Failed to marshal data for service: %v", err)
-	// }
-	// externalAddressString := string(externalAddressData)
-	// KButler.UpdateServiceTelemetry(&externalAddressPath, &externalAddressString)
 }
 
 // Run starts shared informers and waits for the shared informer cache to synchronize
@@ -129,6 +94,7 @@ func (c *ServiceController) serviceAdd(obj interface{}) {
 	service := obj.(*v1.Service)
 	log.Infof("Service CREATED: %s/%s", service.Namespace, service.Name)
 	log.Infof("Service %s/%s has ClusterIP: %v, ClusterIP/s: %v, ExternalIP/s: %v", service.Namespace, service.Name, service.Spec.ClusterIP, service.Spec.ClusterIPs, service.Spec.ExternalIPs)
+
 	processService(service)
 	// config.AddService(service.Namespace, service.Name, externalAddress, node, nodeAddress, nextHops)
 	if service.Namespace == "kube-system" {
@@ -185,6 +151,8 @@ func NewServiceController(informerFactory informers.SharedInformerFactory) *Serv
 // ServiceMgr manages updates of Services from K8
 func ServiceMgr(clientSet *kubernetes.Clientset, kButler *agent.Agent) {
 	KButler = kButler
+	ClientSet = clientSet
+
 	informerFactory := informers.NewSharedInformerFactory(clientSet, time.Hour*24)
 	controller := NewServiceController(informerFactory)
 

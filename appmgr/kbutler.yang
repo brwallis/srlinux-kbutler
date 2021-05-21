@@ -35,6 +35,10 @@ module kbutler {
                     type string;
                     description "Operational state of the service on this device";
                 }
+                leaf oper-reason {
+                    type string;
+                    description "Reason for the current operational state of the service";
+                }
                 list external-address {
                     key "address hostname";
                     description "List of external addresses this service can be reached via";
@@ -49,6 +53,18 @@ module kbutler {
                     leaf host-address {
                         type string;
                         description "IP address this host is advertising for service reachability";
+                    }
+                    leaf oper-state {
+                        type string;
+                        description "Operational state of reachability to the host+service";
+                    }
+                    leaf oper-reason {
+                        type string;
+                        description "Reason for the current operational state of the host+service";
+                    }
+                    leaf fib-programmed {
+                        type boolean;
+                        description "Indicates if this host+service is present in hardware, not just the routing table";
                     }
                 }
             }

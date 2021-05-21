@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -23,6 +24,16 @@ type CfgTranxEntry struct {
 	Data *string
 }
 
+type ServiceKey struct {
+	Name      string
+	Namespace string
+}
+
+type EndpointKey struct {
+	ExternalAddress string
+	Hostname        string
+}
+
 // Agent represents an instance of an NDK agent
 type Agent struct {
 	m *sync.RWMutex
@@ -36,10 +47,12 @@ type Agent struct {
 
 	CfgTranxMap map[string][]CfgTranxEntry
 
-	Yang                config.AgentYang
-	YangService         map[string]*config.Service
-	YangExternalAddress map[string]*config.ExternalAddress
-	YangRoot            string
+	Yang         config.AgentYang
+	YangService  map[ServiceKey]*config.Service
+	YangEndpoint map[EndpointKey]*config.Endpoint
+	YangRoot     string
+
+	ServiceMap map[ServiceKey][]EndpointKey
 }
 
 func (a *Agent) GetName() string {
@@ -58,10 +71,8 @@ func (a *Agent) SetStreamID(streamID uint64) {
 	a.StreamID = streamID
 }
 
-func (a *Agent) UpdateServiceTelemetry(jsPath *string, jsData *string) {
+func (a *Agent) UpdateTelemetry(jsPath *string, jsData *string) *protos.TelemetryUpdateResponse {
 	ctx := context.Background()
-	log.Infof("JsPath: %s", jsPath)
-	log.Infof("JsString: %s", jsData)
 
 	// Set up agent name
 	ctx = metadata.AppendToOutgoingContext(ctx, "agent_name", a.Name)
@@ -74,41 +85,53 @@ func (a *Agent) UpdateServiceTelemetry(jsPath *string, jsData *string) {
 	telReq.State = make([]*protos.TelemetryInfo, 0)
 	telReq.State = append(telReq.State, entry)
 
-	r1, err := telClient.TelemetryAddOrUpdate(ctx, telReq)
+	result, err := telClient.TelemetryAddOrUpdate(ctx, telReq)
 	if err != nil {
 		log.Fatalf("Could not update telemetry for key : %s", jsPath)
 	}
-	log.Infof("Telemetry add/update status: %s error_string: %s", r1.GetStatus(), r1.GetErrorStr())
+	log.Infof("Telemetry add/update status: %s error_string: %s", result.GetStatus(), result.GetErrorStr())
+	return result
 }
 
-func (a *Agent) UpdateTelemetry() {
-	ctx := context.Background()
-	JsData, err := json.Marshal(a.Yang)
+func (a *Agent) UpdateEndpointTelemetry(serviceKey ServiceKey, endpointKey EndpointKey) {
+	jsPath := fmt.Sprintf("%s.service{.service_name==\"%s\"&&.namespace==\"%s\"}.external_address{.address==\"%s\"&&.hostname==\"%s\"}", a.YangRoot, serviceKey.Name, serviceKey.Namespace, endpointKey.ExternalAddress, endpointKey.Hostname)
+	jsData, err := json.Marshal(a.YangEndpoint[endpointKey])
 	if err != nil {
 		log.Fatalf("Can not marshal config data: error %s", err)
 	}
-	JsString := string(JsData)
-	log.Infof("JsPath: %s", a.YangRoot)
-	log.Infof("JsString: %s", JsString)
+	jsString := string(jsData)
+	result := a.UpdateTelemetry(&jsPath, &jsString)
 
-	// Set up agent name
-	// ctx = metadata.AppendToOutgoingContext(ctx, "agent_name", agent.Name)
-	// telClient := protos.NewSdkMgrTelemetryServiceClient(a.GetGRPCConn())
-	ctx = metadata.AppendToOutgoingContext(ctx, "agent_name", a.Name)
-	telClient := protos.NewSdkMgrTelemetryServiceClient(a.GrpcConn)
+	log.Infof("Telemetry add/update status: %s error_string: %s", result.GetStatus(), result.GetErrorStr())
+}
 
-	key := &protos.TelemetryKey{JsPath: a.YangRoot}
-	data := &protos.TelemetryData{JsonContent: JsString}
-	entry := &protos.TelemetryInfo{Key: key, Data: data}
-	telReq := &protos.TelemetryUpdateRequest{}
-	telReq.State = make([]*protos.TelemetryInfo, 0)
-	telReq.State = append(telReq.State, entry)
-
-	r1, err := telClient.TelemetryAddOrUpdate(ctx, telReq)
+func (a *Agent) UpdateServiceTelemetry(serviceKey ServiceKey) {
+	jsPath := fmt.Sprintf("%s.service{.service_name==\"%s\"&&.namespace==\"%s\"}", a.YangRoot, serviceKey.Name, serviceKey.Namespace)
+	jsData, err := json.Marshal(a.YangService[serviceKey])
 	if err != nil {
-		log.Fatalf("Could not update telemetry for key : %s", a.YangRoot)
+		log.Fatalf("Can not marshal config data: error %s", err)
 	}
-	log.Infof("Telemetry add/update status: %s error_string: %s", r1.GetStatus(), r1.GetErrorStr())
+	jsString := string(jsData)
+	result := a.UpdateTelemetry(&jsPath, &jsString)
+
+	log.Infof("Telemetry add/update status: %s error_string: %s", result.GetStatus(), result.GetErrorStr())
+}
+
+func (a *Agent) UpdateBaseTelemetry() {
+	jsData, err := json.Marshal(a.Yang)
+	if err != nil {
+		log.Fatalf("Can not marshal config data: error %s", err)
+	}
+	jsString := string(jsData)
+	result := a.UpdateTelemetry(&a.YangRoot, &jsString)
+
+	log.Infof("Telemetry add/update status: %s error_string: %s", result.GetStatus(), result.GetErrorStr())
+}
+
+// DeleteEndpoint sends a delete to NDK for the specified service + endpoint
+func (a *Agent) DeleteEndpoint(serviceKey ServiceKey, endpointKey EndpointKey) {
+	jsPath := fmt.Sprintf("%s.service{.service_name==\"%s\"&&.namespace==\"%s\"}.external_address{.address==\"%s\"&&.hostname==\"%s\"}", a.YangRoot, serviceKey.Name, serviceKey.Namespace, endpointKey.ExternalAddress, endpointKey.Hostname)
+	a.DeleteTelemetry(&jsPath)
 }
 
 // DeleteTelemetry sends a delete to NDK for the specified path
@@ -116,8 +139,6 @@ func (a *Agent) DeleteTelemetry(JsPath *string) {
 	ctx := context.Background()
 
 	// Set up agent name
-	// ctx = metadata.AppendToOutgoingContext(ctx, "agent_name", agent.Name)
-	// telClient := protos.NewSdkMgrTelemetryServiceClient(a.GetGRPCConn())
 	ctx = metadata.AppendToOutgoingContext(ctx, "agent_name", a.Name)
 	telClient := protos.NewSdkMgrTelemetryServiceClient(a.GrpcConn)
 
@@ -164,19 +185,13 @@ func (a *Agent) Init(name string, ndkAddress string, yangRoot string) {
 	a.Client = client
 	a.OwnAppID = r.GetAppId()
 	a.YangRoot = yangRoot
-	// agent = Agent{
-	// 	Name:     name,
-	// 	GrpcConn: conn,
-	// 	Client:   client,
-	// 	OwnAppID: r.GetAppId(),
-	// }
 
-	// agent.CfgTranxMap = make(map[string][]CfgTranxEntry)
 	a.CfgTranxMap = make(map[string][]CfgTranxEntry)
+	a.YangService = make(map[ServiceKey]*config.Service)
+	a.YangEndpoint = make(map[EndpointKey]*config.Endpoint)
+	a.ServiceMap = make(map[ServiceKey][]EndpointKey)
 
 	subscribeStreams(a)
-
-	// return &agent, err
 }
 
 // SubscribeStreams subscribes for config notifications
@@ -184,7 +199,6 @@ func subscribeStreams(a *Agent) {
 	ctx := context.Background()
 	// Set up agent name
 	ctx = metadata.AppendToOutgoingContext(ctx, "agent_name", a.GetName())
-	// ctx = metadata.AppendToOutgoingContext(ctx, "agent_name", agent.Name)
 
 	notifRegReq := &protos.NotificationRegisterRequest{Op: protos.NotificationRegisterRequest_Create}
 	r3, err := a.Client.NotificationRegister(ctx, notifRegReq)
@@ -241,8 +255,8 @@ func (a *Agent) ReceiveNotifications() {
 	<-waitc
 }
 
-// HandleKubeConfigEvent handles configuration events for the .kubernetes node
-func HandleKubeConfigEvent(op protos.SdkMgrOperation, key *protos.ConfigKey, data *string, a *Agent) {
+// HandleKButlerConfigEvent handles configuration events for the .kbutler node
+func HandleKButlerConfigEvent(op protos.SdkMgrOperation, key *protos.ConfigKey, data *string, a *Agent) {
 	log.Infof("\n jspath %s keys %v", key.GetJsPath(), key.GetKeys())
 
 	if data != nil {
@@ -266,33 +280,6 @@ func HandleKubeConfigEvent(op protos.SdkMgrOperation, key *protos.ConfigKey, dat
 
 	log.Infof("\nkey %v", *key)
 	log.Infof("\nkey %v doing something now", *key)
-
-	// a.Yang.SetName(cur.Name.Value)
-	// // a.Yang.Name.Value = cur.Name.Value
-	// if len(a.Yang.Name.Value) < 1 {
-	// 	a.Yang.SetResponse("Hello, do tell me your name")
-	// 	// a.Yang.Response.Value = fmt.Sprintf("Hello, do tell me your name")
-	// } else {
-	// 	a.Yang.SetResponse(fmt.Sprintf("Hello, %s", a.Yang.GetName()))
-	// 	// a.Yang.Response.Value = fmt.Sprintf("Hello, %s", a.Yang.GetName())
-	// }
-	// a.UpdateTelemetry()
-	// agent.Yang.Name = cur.Kubernetes.Name
-	// if len(*agent.Yang.Name) < 1 {
-	// 	*agent.Yang.Response = fmt.Sprintf("Hello, do tell me your name")
-	// } else {
-	// 	*agent.Yang.Response = fmt.Sprintf("Hello, %s", *agent.Yang.Name)
-	// }
-	// JsData, err := json.Marshal(a.Yang)
-	// if err != nil {
-	// 	log.Fatalf("Can not marshal config data:%v error %s", *data, err)
-	// }
-	// JsString := string(JsData)
-	// log.Infof("JsPath: %s", JsPath)
-	// log.Infof("JsString: %s", JsString)
-
-	// a.UpdateTelemetry(&JsPath, &JsString)
-	//ProgramRoutes(FibMgr.YangGoFib.InputFib.Value)
 }
 
 // HandleConfigEvent handles a configuration event, calling the correct function to handle it
@@ -304,12 +291,13 @@ func HandleConfigEvent(op protos.SdkMgrOperation, key *protos.ConfigKey, data *s
 		return
 	}
 
-	// for _, item := range FibMgr.CfgTranxMap[".gofib.ipv4_routes"] {
-	// 	HandleIpv4ConfigEvent(item.Op, item.Key, item.Data)
-	// }
+	for _, item := range a.CfgTranxMap[".kbutler.config-node"] {
+		log.Infof("%s", item)
+		// HandleKButlerConfigEvent(item.Op, item.Key, item.Data)
+	}
 
-	for _, item := range a.CfgTranxMap[".kubernetes"] {
-		HandleKubeConfigEvent(item.Op, item.Key, item.Data, a)
+	for _, item := range a.CfgTranxMap[a.YangRoot] {
+		HandleKButlerConfigEvent(item.Op, item.Key, item.Data, a)
 	}
 
 	// Delete all current candidate list.

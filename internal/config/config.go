@@ -2,6 +2,10 @@ package config
 
 // import "fmt"
 
+type ProgrammingState struct {
+	Value bool `json:"value"`
+}
+
 type OperState struct {
 	Value string `json:"value"`
 }
@@ -23,10 +27,12 @@ type Node struct {
 	// } `json:"next_hop"`
 }
 
-type ExternalAddress struct {
+type Endpoint struct {
 	// Node map[string]Node `json:"node"`
-	OperState   OperState `json:"oper_state"`
-	HostAddress Address   `json:"host_address"`
+	OperState     OperState        `json:"oper_state"`
+	OperReason    OperState        `json:"oper_reason"`
+	FIBProgrammed ProgrammingState `json:"fib_programmed"`
+	HostAddress   Address          `json:"host_address"`
 	// Address Address         `json:"address"`
 	// Address string `json:"address"`
 	// NextHops struct {
@@ -36,7 +42,8 @@ type ExternalAddress struct {
 
 type Service struct {
 	// ExternalAddress map[string]ExternalAddress `json:"external_address"`
-	OperState OperState `json:"oper_state"`
+	OperState  OperState `json:"oper_state"`
+	OperReason OperState `json:"oper_reason"`
 	// Name            Name                       `json:"name"`
 	// Name string `json:"name"`
 }
